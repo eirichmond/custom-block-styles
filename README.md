@@ -89,6 +89,11 @@ By default, CSS files are loaded from `/assets/css/styles/`. You can change this
 new Custom_Block_Styles( $custom_block_styles, '/css/block-styles/' );
 ```
 
+## Tested with
+
+- WordPress 6.8
+- PHP 8.1
+
 ## Requirements
 
 - WordPress 5.9+
