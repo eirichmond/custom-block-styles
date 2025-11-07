@@ -55,7 +55,7 @@ class Custom_Block_Styles {
 		$this->styles_path  = trailingslashit( $styles_path );
 
 		// Hook into WordPress
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
+		add_action( 'enqueue_block_assets', array( $this, 'enqueue_styles' ) );
 		add_action( 'init', array( $this, 'register_block_styles' ) );
 	}
 
@@ -121,4 +121,3 @@ class Custom_Block_Styles {
 		}
 	}
 }
-
