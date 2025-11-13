@@ -66,6 +66,7 @@ class Custom_Block_Styles {
 
 		// Hook into WordPress
 		add_action( 'enqueue_block_assets', array( $this, 'enqueue_styles' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_dependencies' ) );
 		add_action( 'init', array( $this, 'register_block_styles' ) );
 	}
 
@@ -102,6 +103,51 @@ class Custom_Block_Styles {
 			);
 
 			wp_enqueue_style( $handle );
+		}
+	}
+
+	/**
+	 * Enqueue stylesheet dependencies in the block editor
+	 *
+	 * Ensures dependencies are available in the editor so block styles
+	 * can load correctly. If a dependency is not registered, attempts to
+	 * register it using common theme file paths.
+	 *
+	 * @since 1.0.0
+	 */
+	public function enqueue_editor_dependencies() {
+		if ( empty( $this->dependencies ) ) {
+			return;
+		}
+
+		foreach ( $this->dependencies as $dependency ) {
+			// If dependency is not registered, try to register it
+			if ( ! wp_style_is( $dependency, 'registered' ) ) {
+				// Common theme style patterns
+				$possible_paths = array(
+					'style.css',
+					'assets/css/style.css',
+					get_stylesheet() . '.css',
+				);
+
+				foreach ( $possible_paths as $path ) {
+					$file_path = get_template_directory() . '/' . $path;
+					if ( file_exists( $file_path ) ) {
+						wp_register_style(
+							$dependency,
+							get_template_directory_uri() . '/' . $path,
+							array(),
+							filemtime( $file_path )
+						);
+						break;
+					}
+				}
+			}
+
+			// Enqueue if registered (either already or just registered above)
+			if ( wp_style_is( $dependency, 'registered' ) && ! wp_style_is( $dependency, 'enqueued' ) ) {
+				wp_enqueue_style( $dependency );
+			}
 		}
 	}
 
