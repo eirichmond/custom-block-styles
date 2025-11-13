@@ -41,6 +41,13 @@ class Custom_Block_Styles {
 	private $styles_path;
 
 	/**
+	 * Stylesheet dependencies
+	 *
+	 * @var array
+	 */
+	private $dependencies;
+
+	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
@@ -49,10 +56,13 @@ class Custom_Block_Styles {
 	 *                             Each item should have 'block', 'name', and 'label' keys.
 	 * @param string $styles_path  Base path for CSS files relative to theme directory.
 	 *                             Default: '/assets/css/styles/'.
+	 * @param array  $dependencies Array of stylesheet handles to depend on.
+	 *                             Default: array().
 	 */
-	public function __construct( $block_styles, $styles_path = '/assets/css/styles/' ) {
-		$this->block_styles = $block_styles;
-		$this->styles_path  = trailingslashit( $styles_path );
+	public function __construct( $block_styles, $styles_path = '/assets/css/styles/', $dependencies = array() ) {
+		$this->block_styles  = $block_styles;
+		$this->styles_path   = trailingslashit( $styles_path );
+		$this->dependencies  = $dependencies;
 
 		// Hook into WordPress
 		add_action( 'enqueue_block_assets', array( $this, 'enqueue_styles' ) );
@@ -87,7 +97,7 @@ class Custom_Block_Styles {
 			wp_register_style(
 				$handle,
 				get_template_directory_uri() . $css_file,
-				array(),
+				$this->dependencies,
 				filemtime( $css_path )
 			);
 
