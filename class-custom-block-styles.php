@@ -41,13 +41,6 @@ class Custom_Block_Styles {
 	private $styles_path;
 
 	/**
-	 * Stylesheet dependencies
-	 *
-	 * @var array
-	 */
-	private $dependencies;
-
-	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
@@ -56,18 +49,15 @@ class Custom_Block_Styles {
 	 *                             Each item should have 'block', 'name', and 'label' keys.
 	 * @param string $styles_path  Base path for CSS files relative to theme directory.
 	 *                             Default: '/assets/css/styles/'.
-	 * @param array  $dependencies Array of stylesheet handles to depend on.
-	 *                             Default: array().
 	 */
-	public function __construct( $block_styles, $styles_path = '/assets/css/styles/', $dependencies = array() ) {
+	public function __construct( $block_styles, $styles_path = '/assets/css/styles/' ) {
 		$this->block_styles  = $block_styles;
 		$this->styles_path   = trailingslashit( $styles_path );
-		$this->dependencies  = $dependencies;
 
 		// Hook into WordPress
-		add_action( 'enqueue_block_assets', array( $this, 'enqueue_styles' ) );
-		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_editor_dependencies' ) );
 		add_action( 'init', array( $this, 'register_block_styles' ) );
+		add_action( 'enqueue_block_assets', array( $this, 'enqueue_styles' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_site_editor_styles' ), 20 );
 	}
 
 	/**
@@ -98,7 +88,7 @@ class Custom_Block_Styles {
 			wp_register_style(
 				$handle,
 				get_template_directory_uri() . $css_file,
-				$this->dependencies,
+				array(),
 				filemtime( $css_path )
 			);
 
@@ -107,46 +97,39 @@ class Custom_Block_Styles {
 	}
 
 	/**
-	 * Enqueue stylesheet dependencies in the block editor
+	 * Enqueue styles specifically for the site editor
 	 *
-	 * Ensures dependencies are available in the editor so block styles
-	 * can load correctly. If a dependency is not registered, attempts to
-	 * register it using common theme file paths.
+	 * The site editor uses an iframe and styles need to be loaded into it.
+	 * WordPress normally only loads block styles when the block is present,
+	 * but for the site editor we force-load all styles so they're available
+	 * when users add blocks and apply styles.
 	 *
 	 * @since 1.0.0
 	 */
-	public function enqueue_editor_dependencies() {
-		if ( empty( $this->dependencies ) ) {
+	public function enqueue_site_editor_styles() {
+		// Only run in admin context
+		if ( ! is_admin() ) {
 			return;
 		}
 
-		foreach ( $this->dependencies as $dependency ) {
-			// If dependency is not registered, try to register it
-			if ( ! wp_style_is( $dependency, 'registered' ) ) {
-				// Common theme style patterns
-				$possible_paths = array(
-					'style.css',
-					'assets/css/style.css',
-					get_stylesheet() . '.css',
-				);
+		// Check if we're in the site editor
+		$screen = get_current_screen();
+		if ( ! $screen || $screen->id !== 'site-editor' ) {
+			return;
+		}
 
-				foreach ( $possible_paths as $path ) {
-					$file_path = get_template_directory() . '/' . $path;
-					if ( file_exists( $file_path ) ) {
-						wp_register_style(
-							$dependency,
-							get_template_directory_uri() . '/' . $path,
-							array(),
-							filemtime( $file_path )
-						);
-						break;
-					}
-				}
+		// Force enqueue all block styles in site editor
+		// This ensures styles are available when users add blocks
+		foreach ( $this->block_styles as $style ) {
+			if ( ! isset( $style['name'] ) ) {
+				continue;
 			}
 
-			// Enqueue if registered (either already or just registered above)
-			if ( wp_style_is( $dependency, 'registered' ) && ! wp_style_is( $dependency, 'enqueued' ) ) {
-				wp_enqueue_style( $dependency );
+			$handle = $style['name'];
+
+			// Force enqueue even if block isn't present
+			if ( wp_style_is( $handle, 'registered' ) && ! wp_style_is( $handle, 'enqueued' ) ) {
+				wp_enqueue_style( $handle );
 			}
 		}
 	}
